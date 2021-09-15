@@ -1,0 +1,25 @@
+/* Enable Dark Mode */
+body {
+    color: #FFFFFF;
+    background-color: #151515;
+}
+
+/* Unvisited Link */
+a:link {
+    color: #00AAFF;
+}
+
+/* Visited Link */
+a:visited {
+    color: #CC00FF;
+}
+
+/* Mouse over Link */
+a:hover {
+    color: #00FFFF;
+}
+
+/* Selected Link */
+a:active {
+    color: #550099;
+} 

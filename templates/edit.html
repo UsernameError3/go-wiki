@@ -1,6 +1,22 @@
-<h1>Editing {{.Title}}</h1>
+<!doctype html>
+<html lang="en">
 
-<form action="/save/{{.Title}}" method="POST">
-<div><textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea></div>
-<div><input type="submit" value="Save"></div>
-</form>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editing: {{.Title}}</title>
+    <meta name="description" content="Go Wiki Page Editor">
+    <meta name="author" content="Alex Fleming">
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+    <h1>Editing {{.Title}}</h1>
+
+    <form action="/save/{{.Title}}" method="POST">
+        <div><textarea name="body" rows="20" cols="80">{{printf "%s" .Body}}</textarea></div>
+        <div><input type="submit" value="Save"></div>
+    </form>
+</body>
+
+</html>

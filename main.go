@@ -1,25 +1,28 @@
 package main
 
 // Followed Example Project Guide: https://golang.org/doc/articles/wiki/
+// Followed some of the extra tasks from: https://larry-price.com/blog/2014/01/07/finishing-the-google-go-writing-web-applications-tutorial/
 
 // Define Imports
 import (
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
-	"text/template"
 )
 
 // Define Variables
 var templates = template.Must(template.ParseFiles("templates/edit.html", "templates/view.html"))
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+var linkPath = regexp.MustCompile("\\[([a-zA-Z0-9]+)\\]")
 
 // Define Data Structures
 // Slices are similar to arrays but more flexible and more efficient. Reference: https://go.dev/blog/slices-intro
 type Page struct {
-	Title string
-	Body  []byte
+	Title       string
+	Body        []byte
+	DisplayBody template.HTML
 }
 
 // Define Functions
@@ -48,13 +51,37 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
-// Allows users to view a Wiki Page by handling URL's with '/view/'
+// Allows the Wiki to have a Home Page.
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/view/index", http.StatusFound)
+}
+
+/* Old View Handler: Allows users to view a Wiki Page by handling URL's with '/view/'
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 		return
 	}
+	renderTemplate(w, "view", p)
+}*/
+
+// Allows users to view a Wiki Page by handling URL's with '/view/' and Displays Interlinkable Pages
+func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
+	p, err := loadPage(title)
+	if err != nil {
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+		return
+	}
+
+	escapedBody := []byte(template.HTMLEscapeString(string(p.Body)))
+
+	p.DisplayBody = template.HTML(linkPath.ReplaceAllFunc(escapedBody, func(str []byte) []byte {
+		matched := linkPath.FindStringSubmatch(string(str))
+		out := []byte("<a href=\"/view/" + matched[1] + "\">" + matched[1] + "</a>")
+		return out
+	}))
+
 	renderTemplate(w, "view", p)
 }
 
@@ -100,8 +127,10 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 
 // Main Event Loop
 func main() {
+	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
