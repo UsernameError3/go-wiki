@@ -4,7 +4,6 @@ package main
 
 // Define Imports
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,7 +12,7 @@ import (
 )
 
 // Define Variables
-var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
+var templates = template.Must(template.ParseFiles("templates/edit.html", "templates/view.html"))
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
 // Define Data Structures
@@ -27,13 +26,13 @@ type Page struct {
 // Save Method for Persistent Storage
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
-	return ioutil.WriteFile(filename, p.Body, 0600)
+	return ioutil.WriteFile("data/"+filename, p.Body, 0600)
 }
 
-// Loading Pages and Catching Errors
+// Loading Pages and Catch Errors
 func loadPage(title string) (*Page, error) {
 	filename := title + ".txt"
-	body, err := ioutil.ReadFile(filename)
+	body, err := ioutil.ReadFile("data/" + filename)
 	if err != nil {
 		return nil, err
 	}
@@ -46,35 +45,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	err := templates.ExecuteTemplate(w, tmpl+".html", p)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// Validates the Path to prevent users supplying arbitrary ptahs to be read/written on the server.
-func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
-	m := validPath.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return "", errors.New("invalid Page Title")
-	}
-	return m[2], nil
-}
-
-// Use Function Literals and Closures to wrap each handler to remove validation redundancy
-/*
-Notes from guide:
-The closure returned by makeHandler is a function that takes an http.ResponseWriter and http.Request (in other words, an http.HandlerFunc).
-The closure extracts the title from the request path, and validates it with the validPath regexp.
-If the title is invalid, an error will be written to the ResponseWriter using the http.NotFound function.
-If the title is valid, the enclosed handler function fn will be called with the ResponseWriter, Request, and title as arguments.
-*/
-func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		m := validPath.FindStringSubmatch(r.URL.Path)
-		if m == nil {
-			http.NotFound(w, r)
-			return
-		}
-		fn(w, r, m[2])
 	}
 }
 
@@ -107,6 +77,25 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 		return
 	}
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+
+// Use Function Literals and Closures to wrap each handler to remove validation redundancy
+/*
+Notes from guide:
+The closure returned by makeHandler is a function that takes an http.ResponseWriter and http.Request (in other words, an http.HandlerFunc).
+The closure extracts the title from the request path, and validates it with the validPath regexp.
+If the title is invalid, an error will be written to the ResponseWriter using the http.NotFound function.
+If the title is valid, the enclosed handler function fn will be called with the ResponseWriter, Request, and title as arguments.
+*/
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
+	}
 }
 
 // Main Event Loop
